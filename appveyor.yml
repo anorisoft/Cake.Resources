@@ -1,129 +1,32 @@
 version: 1.0.{build}
+
+environment:
+  CAKE_SETTINGS_SKIPVERIFICATION: true
+  CAKE_NUGET_USEINPROCESSCLIENT: true
+
+image:
+  - Visual Studio 2017
+  - Ubuntu
+init:
+  - ps: >-
+      Install-Module Pester -Force -Scope CurrentUser;
+
+      pwsh -command "Install-Module Pester -Force -Scope CurrentUser";
 build_script:
-- ps: >-
+  - ps: >-
+      Write-Output "nothing to build."
 
-    # Temporarily skip verification and opt-in to new in-proc NuGet
+test_script:
+  - ps: >-
+      $testresultFolder = '.\tests\testresults';
 
-    $ENV:CAKE_SETTINGS_SKIPVERIFICATION='true'
+      $tests = '.\tests\Tests.ps1 -testresultFolder $testresultFolder;'
 
-    $ENV:CAKE_NUGET_USEINPROCESSCLIENT='true'
+      Invoke-Expression $tests;
 
-    'Creating Test Cake File'
+      $upload = '.\tests\Upload-testresults.ps1 -testresultFolder $testresultFolder;'
 
-    'Information("Test success: {0}", DateTime.Now);' > build.cake
-
-
-    'Testing with PowerShell Current'
-
-    $OutputA = ./build.ps1 2>&1
-
-    $OutputA
-
-    if ($LastExitCode -ne 0)
-
-    {
-      'PowerShell 3 failed'
-
-      exit 3
-    }
-
-
-
-
-    'Testing with PowerShell V2'
-
-    $OutputB = PowerShell -Version 2.0 -File .\build.ps1 2>&1
-
-    $OutputB
-
-    if ($LastExitCode -ne 0)
-
-    {
-      'PowerShell 2 failed'
-
-      exit 2
-    }
-
-
-
-    'Creating Test Module Files'
-
-    New-Item -ItemType Directory ./tools/modules
-
-    "<?xml version=""1.0"" encoding=""utf-8""?>`r`n<packages>`r`n    <package id=""Cake.Chocolatey.Module"" version=""0.5.0"" />`r`n</packages>" | Out-File -Encoding utf8 -FilePath ./tools/modules/packages.config
-
-    New-Item -ItemType Directory ./tools/addins
-
-    "<?xml version=""1.0"" encoding=""utf-8""?>`r`n<packages>`r`n    <package id=""Cake.MicrosoftTeams"" version=""0.7.0"" />`r`n</packages>" | Out-File -Encoding utf8 -FilePath ./tools/addins/packages.config
-
-
-    'Testing with PowerShell Module & Addin restore'
-
-    $OutputC = ./build.ps1 2>&1
-
-    $OutputC
-
-    if ($LastExitCode -ne 0)
-
-    {
-      'PowerShell Module failed'
-
-      exit 2
-    }
-
-
-
-    'Validating StdErr'
-
-    $stdErrA = $OutputA | ?{ $_ -is [System.Management.Automation.ErrorRecord] }
-
-    $stdErrB = $OutputB | ?{ $_ -is [System.Management.Automation.ErrorRecord] }
-
-    $stdErrC = $OutputC | ?{ $_ -is [System.Management.Automation.ErrorRecord] }
-
-
-    $hasStdErrA = ($stdErrA | Measure-Object).Count -gt 0
-
-    $hasStdErrB = ($stdErrB | Measure-Object).Count -gt 0
-
-    $hasStdErrC = ($stdErrC | Measure-Object).Count -gt 0
-
-
-    if ($hasStdErrA)
-
-    {
-        'Std Error V3'
-
-        $stdErrA
-
-        exit 3
-    }
-
-
-    if ($hasStdErrB)
-
-    {
-        'Std Error V2'
-
-        $stdErrB
-
-        exit 2
-    }
-
-
-    if ($hasStdErrC)
-
-    {
-        'Module Error'
-
-        $stdErrC
-
-        exit 4
-    }
-
-
-    'No Issues found'
-
+      Invoke-Expression $upload;
 
 artifacts:
   - path: '**\*'
